@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "NAIK — Sistem Upgrade Diri",
+  "short_name": "NAIK",
+  "description": "Rutinitas, produktivitas, Shopee Affiliate, Duolingo, dan evaluasi diri.",
+  "lang": "id-ID",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f3",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

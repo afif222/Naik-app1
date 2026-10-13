@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="NAIK — Sistem Upgrade Diri, rutinitas dan produktivitas pribadi.">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>NAIK</title>
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#14231f;--mut:#5d6f69;--ac:#0f766e;--ac2:#e3f2ef;--ln:#d9e2de;--warn:#b45309;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1715;--card:#16231f;--ink:#e7f0ed;--mut:#93a8a1;--ac:#2dd4bf;--ac2:#173a35;--ln:#25382f;--warn:#fbbf24}}
+:root[data-theme="dark"]{--bg:#0e1715;--card:#16231f;--ink:#e7f0ed;--mut:#93a8a1;--ac:#2dd4bf;--ac2:#173a35;--ln:#25382f;--warn:#fbbf24}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:84px}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:26px;margin:4px 0}h2{font-size:18px;margin:22px 0 8px}h3{font-size:15px;margin:0 0 6px}
+.mut{color:var(--mut);font-size:14px}.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px;margin:10px 0}
+.big{font-size:40px;font-weight:800;line-height:1.1}
+.bar{height:10px;background:var(--ac2);border-radius:9px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--ac)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{min-height:48px;padding:0 16px;border-radius:12px;border:1px solid var(--ln);background:var(--card);cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac);font-weight:700}
+:root[data-theme="dark"] button.p{color:#06201c}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) button.p{color:#06201c}}
+button.d{color:var(--warn)}
+input,select,textarea{width:100%;min-height:46px;padding:8px 12px;border-radius:10px;border:1px solid var(--ln);background:var(--bg)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row>.f0{flex:0}
+.chk{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 4px;border-bottom:1px solid var(--ln)}
+.chk:last-child{border:0}.chk b{flex:1;font-weight:600}.chk .bx{width:30px;height:30px;border-radius:9px;border:2px solid var(--ln);display:grid;place-items:center;flex:0 0 30px}
+.chk.on .bx{background:var(--ac);border-color:var(--ac);color:#fff}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--ln);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;border-radius:0;background:none;min-height:60px;font-size:13px;color:var(--mut)}nav button.on{color:var(--ac);font-weight:800}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--ac2);font-size:12px;margin-right:4px}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:6px;border-bottom:1px solid var(--ln);text-align:left}
+label.l{display:block;font-size:13px;color:var(--mut);margin:10px 0 3px}
+.toast{position:fixed;left:16px;right:16px;bottom:96px;background:var(--ink);color:var(--bg);padding:12px;border-radius:12px;text-align:center;z-index:9}
+</style></head><body><main id="app"></main>
+<nav id="nav"></nav><div id="toast"></div>
+<script>
+const KEY="naik.v1",SALAT=["Subuh","Zuhur","Asar","Magrib","Isya"];
+const DEF={settings:{nick:"",wake:"05:00",sleep:"22:30",target:3,duoMin:15,theme:"auto",
+ w:{salat:25,shopee:30,duo:15,tidur:15,tumbuh:15},rem:{bangun:["05:00",1],konten:["09:00",1],duo:["16:00",1],malam:["21:00",1],tidur:["22:00",1]}},
+ habits:[{id:"olahraga",n:"Olahraga ringan 10–20 menit",on:1},{id:"air",n:"Minum air teratur",on:1},{id:"baca",n:"Membaca 10 menit",on:1},{id:"agama",n:"Belajar ilmu agama",on:0},{id:"rapi",n:"Merapikan kamar",on:0},{id:"keluarga",n:"Membantu keluarga",on:0}],
+ days:{},sleeps:[],backup:null,onboarded:false};
+let S,tab="home",sub="",tmr=null,left=0;
+function load(){try{const r=localStorage.getItem(KEY);S=r?JSON.parse(r):null}catch(e){S=null}
+ if(!S)S=JSON.parse(JSON.stringify(DEF));S.settings=Object.assign({},DEF.settings,S.settings);}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Gagal menyimpan. Ekspor data sekarang.")}}
+const pad=n=>String(n).padStart(2,"0");
+const dk=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today=()=>dk(new Date());
+function day(k){k=k||today();if(!S.days[k])S.days[k]={prayers:{},contents:[],duo:false,duoNote:"",vocab:[],habits:{},journal:{},min:false,urges:[],wake:null,wakeLog:[]};return S.days[k]}
+const hm=t=>{const d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes())};
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(m){const t=document.getElementById("toast");t.innerHTML='<div class="toast">'+esc(m)+'</div>';setTimeout(()=>t.innerHTML="",2400)}
+function sleepDone(k){return S.sleeps.some(s=>s.forDay===k)}
+function nextKey(k){const [y,m,d]=k.split("-").map(Number);return dk(new Date(y,m-1,d+1))}
+// skor
+function score(k){const d=S.days[k]||day(k),st=S.settings,w=st.w,c=[];
+ const pr=Object.keys(d.prayers).length/5;c.push(["salat",w.salat,pr,1]);
+ const dn=d.contents.filter(x=>x.status==="selesai"||x.status==="publikasi").length;c.push(["shopee",w.shopee,Math.min(1,dn/Math.max(1,st.target)),1]);
+ c.push(["duo",w.duo,d.duo?1:0,1]);
+ c.push(["tidur",w.tidur,((d.wake?.5:0)+(sleepDone(k)?.5:0)),1]);
+ const hs=S.habits.filter(h=>h.on);if(hs.length)c.push(["tumbuh",w.tumbuh,hs.filter(h=>d.habits[h.id]).length/hs.length,0]);
+ const t=x=>x.reduce((a,b)=>a+b[1],0)||1,f=x=>x.reduce((a,b)=>a+b[1]*b[2],0);
+ const m=c.filter(x=>x[3]);return{all:Math.round(100*f(c)/t(c)),must:Math.round(100*f(m)/t(m)),done:dn,pr:Object.keys(d.prayers).length}}
+function moved(k){const d=S.days[k];if(!d)return false;return d.min||score(k).all>=50}
+function streak(){let n=0,d=new Date();if(!moved(dk(d)))d.setDate(d.getDate()-1);
+ while(moved(dk(d))){n++;d.setDate(d.getDate()-1)}return n}
+const QUOTES=["Jangan tunggu semangat. Mulai dari satu tindakan.","Satu konten kecil lebih berguna dari rencana besar.","Hari yang berat tetap bisa dihitung. Pilih satu langkah.","Konsisten itu soal kembali, bukan soal tidak pernah jatuh."];
+function render(){document.documentElement.dataset.theme=S.settings.theme==="auto"?"":S.settings.theme;
+ const T=[["home","Beranda"],["rut","Rutinitas"],["prod","Produktivitas"],["stat","Statistik"],["set","Pengaturan"]];
+ document.getElementById("nav").innerHTML=T.map(t=>`<button class="${tab===t[0]?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("");
+ const a=document.getElementById("app");
+ if(!S.onboarded){a.innerHTML=onb();return}
+ a.innerHTML=({home,rut,prod,stat,set})[tab]();window.scrollTo(0,0)}
+function go(t){tab=t;sub="";render()}
+// onboarding
+function onb(){const s=S.settings;return `<h1>NAIK</h1><p class="mut">Tidak harus hebat hari ini. Yang penting, hari ini tetap bergerak.</p>
+<div class="card"><label class="l">Nama panggilan (opsional)</label><input id="o1" value="${esc(s.nick)}">
+<label class="l">Target bangun</label><input id="o2" type="time" value="${s.wake}">
+<label class="l">Target tidur</label><input id="o3" type="time" value="${s.sleep}">
+<label class="l">Konten Shopee per hari</label><input id="o4" type="number" min="1" max="20" value="${s.target}">
+<label class="l">Menit Duolingo per hari</label><input id="o5" type="number" min="5" max="120" value="${s.duoMin}">
+<p class="mut">Kebiasaan tambahan bisa diatur nanti di Pengaturan. Semua data hanya tersimpan di HP ini.</p>
+<button class="p" style="width:100%" onclick="doOnb()">Mulai</button></div>`}
+function doOnb(){const s=S.settings,v=i=>document.getElementById(i).value;
+ s.nick=v("o1").trim().slice(0,30);s.wake=v("o2")||s.wake;s.sleep=v("o3")||s.sleep;
+ s.target=Math.max(1,Math.min(20,+v("o4")||3));s.duoMin=Math.max(5,Math.min(120,+v("o5")||15));
+ s.rem.bangun[0]=s.wake;S.onboarded=true;save();render()}
+// beranda
+function home(){const k=today(),d=day(k),sc=score(k),s=S.settings,h=new Date().getHours();
+ const g=h<11?"Selamat pagi":h<15?"Selamat siang":h<18?"Selamat sore":"Selamat malam";
+ const dt=new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+ const todo=[];if(d.pr!==5&&sc.pr<5)todo.push(`Salat: ${5-sc.pr} belum ditandai`);
+ if(sc.done<s.target)todo.push(`Konten Shopee: ${sc.done}/${s.target}`);if(!d.duo)todo.push("Duolingo belum dicentang");
+ if(!d.wake)todo.push("Catat waktu bangun");
+ const q=QUOTES[new Date().getDate()%QUOTES.length];
+ return `<p class="mut">${dt}</p><h1>${g}${s.nick?", "+esc(s.nick):""}</h1><p class="mut">"${q}"</p>
+<div class="card"><div class="mut">Tugas wajib</div><div class="big">${sc.must}%</div><div class="bar"><i style="width:${sc.must}%"></i></div>
+<div class="mut">Semua tugas aktif: ${sc.all}% · Streak: ${streak()} hari${d.min?" · Mode Minimum aktif":""}</div></div>
+<div class="card"><h3>Konten hari ini</h3><div class="big">${sc.done}/${s.target}</div>
+<button class="p" style="width:100%;margin-top:8px" onclick="go('prod')">${sc.done>=s.target?"Target tercapai. Lanjut jika mau":"Kerjakan konten"}</button></div>
+<div class="card"><h3>Prioritas</h3>${todo.length?todo.map(x=>"<div class='chk'><b>"+esc(x)+"</b></div>").join(""):"<p class='mut'>Semua tugas utama sudah ditandai.</p>"}</div>
+<div class="row"><button class="p" onclick="focus()">Mulai fokus 25 menit</button><button onclick="toggleMin()">${d.min?"Matikan":"Aktifkan"} Mode Minimum</button></div>
+<div id="tm"></div>`}
+function toggleMin(){const d=day();d.min=!d.min;save();render();toast(d.min?"Mode Minimum: satu tindakan, Duolingo, catat. Target utama tidak dihitung selesai.":"Mode Minimum dimatikan")}
+function focus(){startTimer(1500,"Fokus")}
+function startTimer(sec,lbl){clearInterval(tmr);left=sec;const tick=()=>{const e=document.getElementById("tm");if(e)e.innerHTML=`<div class="card"><h3>${lbl}</h3><div class="big">${pad(Math.floor(left/60))}:${pad(left%60)}</div><button onclick="stopTimer()">Hentikan</button></div>`;
+ if(left<=0){clearInterval(tmr);notify("NAIK",lbl+" selesai.");toast(lbl+" selesai");if(e)e.innerHTML="";return}left--};tick();tmr=setInterval(tick,1000)}
+function stopTimer(){clearInterval(tmr);const e=document.getElementById("tm");if(e)e.innerHTML=""}
+// rutinitas
+function rut(){const d=day(),s=S.settings;
+ if(sub==="urge")return urge();
+ const wk=d.wake?`Bangun ${hm(d.wake)} (target ${s.wake})`:"Belum dicatat";
+ const sl=S.sleeps.filter(x=>x.forDay===today()||x.forDay===nextKey(today())).slice(-1)[0];
+ return `<h1>Rutinitas</h1>
+<div class="card"><h3>Bangun dan tidur</h3><p class="mut">${wk}${d.wakeDur?" · tidur sekitar "+d.wakeDur:""}</p>
+<div class="row"><button class="p" onclick="doWake()" ${d.wake?"disabled":""}>Saya sudah bangun</button><button onclick="doSleep()">Saya siap tidur</button></div>
+<p class="mut">Target tidur ${s.sleep}. ${sl?"Siap tidur tercatat "+hm(sl.t):""}</p>
+${d.wake?`<label class="l">Kualitas tidur</label><select onchange="day().sleepQ=this.value;save()"><option value="">-</option>${["Buruk","Cukup","Baik"].map(x=>`<option ${d.sleepQ===x?"selected":""}>${x}</option>`).join("")}</select>`:""}
+${d.wake?`<label class="l">Koreksi jam bangun (dicatat)</label><input type="time" onchange="fixWake(this.value)">`:""}</div>
+<div class="card"><h3>Salat lima waktu</h3><p class="mut">Tandai sendiri setelah melaksanakan.</p>
+${SALAT.map(n=>{const p=d.prayers[n];return `<div class="chk ${p?"on":""}" onclick="tPray('${n}')"><span class="bx">${p?"✓":""}</span><b>${n}</b><span class="mut">${p?hm(p):"belum ditandai"}</span></div>`}).join("")}</div>
+<div class="card"><h3>Duolingo (target ${s.duoMin} menit)</h3>
+<div class="chk ${d.duo?"on":""}" onclick="tDuo()"><span class="bx">${d.duo?"✓":""}</span><b>Sesi hari ini selesai</b></div>
+<div class="row"><button onclick="location.href='intent://#Intent;package=com.duolingo;end'">Buka Duolingo</button></div>
+<label class="l">Kosakata baru (pisahkan koma)</label><div class="row"><input id="vc" placeholder="contoh: water, please"><button class="f0" onclick="addVoc()">Simpan</button></div>
+<p class="mut">${d.vocab.map(esc).join(", ")}</p></div>
+<div class="card"><h3>Kebiasaan tambahan</h3>${S.habits.filter(h=>h.on).map(h=>`<div class="chk ${d.habits[h.id]?"on":""}" onclick="tHab('${h.id}')"><span class="bx">${d.habits[h.id]?"✓":""}</span><b>${esc(h.n)}</b></div>`).join("")||"<p class='mut'>Aktifkan kebiasaan di Pengaturan.</p>"}</div>
+<button style="width:100%" onclick="sub='urge';render()">Saat Dorongan Datang</button>`}
+function doWake(){const d=day();if(d.wake)return;const n=Date.now();d.wake=n;
+ const pend=S.sleeps.filter(x=>!x.used&&n-x.t<20*3600e3&&n>x.t).slice(-1)[0];
+ if(pend){pend.used=true;const m=Math.round((n-pend.t)/60000);d.wakeDur=Math.floor(m/60)+"j "+m%60+"m"}
+ save();render();toast("Bangun tercatat "+hm(n))}
+function fixWake(v){if(!v)return;const d=day(),[a,b]=v.split(":").map(Number),x=new Date();x.setHours(a,b,0,0);
+ d.wakeLog.push({dari:d.wake,ke:x.getTime(),saat:Date.now()});d.wake=x.getTime();save();render()}
+function doSleep(){const n=new Date(),k=n.getHours()<12?dk(n):nextKey(dk(n));
+ const last=S.sleeps[S.sleeps.length-1];if(last&&Date.now()-last.t<3600e3){toast("Sudah dicatat kurang dari sejam lalu");return}
+ S.sleeps.push({t:Date.now(),forDay:k,used:false});save();render();toast("Siap tidur tercatat "+hm(Date.now()))}
+function tPray(n){const d=day();if(d.prayers[n])delete d.prayers[n];else d.prayers[n]=Date.now();save();render()}
+function tDuo(){const d=day();d.duo=!d.duo;save();render()}
+function tHab(i){const d=day();d.habits[i]=!d.habits[i];save();render()}
+function addVoc(){const v=document.getElementById("vc").value.split(",").map(x=>x.trim()).filter(Boolean);if(!v.length)return;day().vocab.push(...v);save();render()}
+function urge(){const d=day();return `<button onclick="sub='';render()">← Kembali</button><h1>Saat Dorongan Datang</h1>
+<div class="card"><p>Dorongan bisa berlalu tanpa dituruti. Beri jeda 10 menit.</p><button class="p" style="width:100%" onclick="startTimer(600,'Jeda')">Mulai jeda 10 menit</button><div id="tm"></div></div>
+<div class="card"><h3>Ganti dengan</h3><p class="mut">Berjalan kaki · minum air · berwudu atau berdoa · hubungi orang tepercaya · kerjakan satu tugas ringan</p>
+<label class="l">Pemicu</label><select id="uz">${["Sendirian","Malam hari","Stres","Kekurangan uang","Lainnya"].map(x=>`<option>${x}</option>`).join("")}</select>
+<label class="l">Setelah jeda, dorongan...</label><select id="ua"><option>Berkurang</option><option>Sama</option><option>Masih kuat</option></select>
+<button class="p" style="width:100%;margin-top:10px" onclick="saveUrge()">Simpan catatan pribadi</button>
+<p class="mut">Tersimpan hanya di HP ini. Jika masih kuat, hubungi orang yang kamu percaya sekarang.</p></div>
+<p class="mut">Tercatat hari ini: ${d.urges.length}</p>`}
+function saveUrge(){day().urges.push({t:Date.now(),pemicu:uz.value,hasil:ua.value});save();toast("Tersimpan. Langkah berikutnya: satu hal kecil.")}
+// produktivitas
+function prod(){const d=day(),s=S.settings,sc=score(today());const L=["ide","proses","selesai","publikasi"];
+ return `<h1>Shopee Affiliate</h1><div class="card"><div class="big">Konten hari ini: ${sc.done}/${s.target}</div>
+<div class="bar"><i style="width:${Math.min(100,100*sc.done/s.target)}%"></i></div>
+<p class="mut">${sc.done>=s.target?"Target hari ini tercapai. Lanjut hanya jika kamu mau.":"Sisa "+(s.target-sc.done)+" konten."}</p></div>
+<div class="card"><h3>Tambah konten</h3><input id="cn" placeholder="Nama produk atau judul"><div class="row" style="margin-top:8px"><input id="cc" placeholder="Kategori"><select id="cp"><option>TikTok</option><option>Instagram</option><option>Shopee Video</option><option>Lainnya</option></select></div>
+<button class="p" style="width:100%;margin-top:8px" onclick="addC()">Tambah ide</button></div>
+${d.contents.map((c,i)=>`<div class="card"><b>${esc(c.n)}</b> <span class="tag">${c.status}</span><div class="mut">${esc(c.cat)} · ${esc(c.pl)} · ${hm(c.t)}</div>
+<div class="row" style="margin-top:8px">${c.status==="ide"?`<button onclick="stC(${i},'proses')">Mulai mengerjakan</button>`:""}${c.status==="proses"?`<button class="p" onclick="stC(${i},'selesai')">Tandai selesai</button>`:""}${c.status==="selesai"?`<button class="p" onclick="stC(${i},'publikasi')">Tandai dipublikasikan</button>`:""}<button class="d f0" onclick="delC(${i})">Hapus</button></div>
+${c.status==="publikasi"?`<div class="row" style="margin-top:8px">${["views:Tayangan","klik:Klik","order:Pesanan","komisi:Komisi (Rp)"].map(x=>{const[a,b]=x.split(":");return `<input type="number" min="0" placeholder="${b}" value="${c[a]||""}" onchange="mC(${i},'${a}',this.value)">`}).join("")}</div>`:""}
+<textarea rows="2" placeholder="Hook, skrip, evaluasi" onchange="mC(${i},'note',this.value)" style="margin-top:8px">${esc(c.note||"")}</textarea></div>`).join("")||"<p class='mut'>Belum ada konten hari ini. Mulai dengan satu ide.</p>"}
+<h2>Jurnal malam</h2><div class="card">${[["ok","Apa yang berhasil hari ini?"],["belum","Apa yang belum selesai?"],["sebab","Penyebabnya?"],["besok","Satu perbaikan untuk besok"],["syukur","Yang disyukuri hari ini"]].map(q=>`<label class="l">${q[1]}</label><input value="${esc(d.journal[q[0]]||"")}" onchange="day().journal['${q[0]}']=this.value;save()">`).join("")}</div>
+<p class="mut">Angka performa diisi manual. Aplikasi ini tidak terhubung ke Shopee.</p>`}
+function addC(){const n=cn.value.trim();if(!n){toast("Isi nama produk dulu");return}
+ day().contents.push({n:n.slice(0,100),cat:cc.value.trim().slice(0,40),pl:cp.value,status:"ide",t:Date.now()});save();render()}
+function stC(i,s){day().contents[i].status=s;save();render()}
+function mC(i,k,v){day().contents[i][k]=v;save()}
+function delC(i){if(confirm("Hapus konten ini?")){day().contents.splice(i,1);save();render()}}
+// statistik
+function lastDays(n){const o=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d);x.setDate(d.getDate()-i);o.push(dk(x))}return o}
+function stat(){const ks=Object.keys(S.days);if(!ks.length)return `<h1>Statistik</h1><p class="mut">Belum ada data. Tandai satu tugas di Beranda atau Rutinitas, grafik akan muncul di sini.</p>`;
+ const l7=lastDays(7),l30=lastDays(30);const v=l7.map(k=>S.days[k]?score(k).all:0);
+ const tot=ks.reduce((a,k)=>a+S.days[k].contents.filter(c=>c.status==="selesai"||c.status==="publikasi").length,0);
+ const hit=ks.filter(k=>score(k).done>=S.settings.target).length,duo=ks.filter(k=>S.days[k].duo).length;
+ const pr30=l30.reduce((a,k)=>a+Object.keys((S.days[k]||{prayers:{}}).prayers).length,0);
+ const best=ks.slice().sort((a,b)=>score(b).all-score(a).all)[0];
+ const miss={};ks.forEach(k=>{["duo"].forEach(()=>{if(!S.days[k].duo)miss["Duolingo"]=(miss["Duolingo"]||0)+1});SALAT.forEach(n=>{if(!S.days[k].prayers[n])miss[n]=(miss[n]||0)+1})});
+ const mm=Object.entries(miss).sort((a,b)=>b[1]-a[1])[0];
+ const W=300,H=110,bw=W/7;
+ const svg=`<svg viewBox="0 0 ${W} ${H+16}" width="100%" role="img" aria-label="Skor 7 hari">${v.map((x,i)=>`<rect x="${i*bw+8}" y="${H-x*H/100}" width="${bw-16}" height="${Math.max(2,x*H/100)}" rx="4" fill="var(--ac)"/><text x="${i*bw+bw/2}" y="${H+13}" font-size="10" text-anchor="middle" fill="var(--mut)">${l7[i].slice(8)}</text>`).join("")}</svg>`;
+ const sl=Object.values(S.days).filter(d=>d.wake).slice(-7).map(d=>hm(d.wake));
+ return `<h1>Statistik</h1><div class="card"><h3>Skor 7 hari terakhir (%)</h3>${svg}</div>
+<div class="card"><table>${[["Total konten selesai",tot],["Hari target konten tercapai",hit],["Hari Duolingo dicentang",duo],["Salat tercatat 30 hari",pr30+" dari 150"],["Streak saat ini",streak()+" hari"],["Hari terbaik",best+" ("+score(best).all+"%)"],["Paling sering terlewat",mm?mm[0]+" ("+mm[1]+" hari)":"-"],["Jam bangun terakhir",sl.join(", ")||"-"]].map(r=>`<tr><td>${r[0]}</td><td><b>${r[1]}</b></td></tr>`).join("")}</table></div>
+<h2>Riwayat per tanggal</h2><input type="date" id="hd" onchange="showDay()"><div id="hdv"></div>
+<h2>30 hari</h2><div class="sc"><table><tr>${l30.map(k=>`<td title="${k}" style="background:${S.days[k]?"var(--ac2)":"none"}">${k.slice(8)}</td>`).join("")}</tr></table></div>`}
+function showDay(){const k=hd.value,d=S.days[k];hdv.innerHTML=d?`<div class="card">Skor ${score(k).all}% · Salat ${Object.keys(d.prayers).length}/5 · Konten ${d.contents.length} · Duolingo ${d.duo?"ya":"belum"}${d.journal.ok?"<br>Berhasil: "+esc(d.journal.ok):""}</div>`:"<p class='mut'>Tidak ada data.</p>"}
+// pengaturan
+function set(){const s=S.settings,w=s.w;
+ return `<h1>Pengaturan</h1><div class="card"><label class="l">Nama</label><input value="${esc(s.nick)}" onchange="S.settings.nick=this.value.slice(0,30);save()">
+<div class="row"><div><label class="l">Bangun</label><input type="time" value="${s.wake}" onchange="S.settings.wake=this.value;save()"></div><div><label class="l">Tidur</label><input type="time" value="${s.sleep}" onchange="S.settings.sleep=this.value;save()"></div></div>
+<div class="row"><div><label class="l">Konten/hari</label><input type="number" min="1" max="20" value="${s.target}" onchange="S.settings.target=Math.max(1,+this.value||3);save()"></div><div><label class="l">Menit Duolingo</label><input type="number" min="5" value="${s.duoMin}" onchange="S.settings.duoMin=Math.max(5,+this.value||15);save()"></div></div>
+<label class="l">Tema</label><select onchange="S.settings.theme=this.value;save();render()">${[["auto","Ikuti HP"],["light","Terang"],["dark","Gelap"]].map(x=>`<option value="${x[0]}" ${s.theme===x[0]?"selected":""}>${x[1]}</option>`).join("")}</select></div>
+<h2>Bobot skor (%)</h2><div class="card"><div class="row">${Object.keys(w).map(k=>`<div><label class="l">${k}</label><input type="number" min="0" max="100" value="${w[k]}" onchange="S.settings.w['${k}']=Math.max(0,+this.value||0);save()"></div>`).join("")}</div><p class="mut">Skor dinormalisasi dari tugas aktif. Skor lama dihitung ulang dengan bobot baru.</p></div>
+<h2>Kebiasaan</h2><div class="card">${S.habits.map((h,i)=>`<div class="chk ${h.on?"on":""}"><span class="bx" onclick="S.habits[${i}].on=!S.habits[${i}].on;save();render()">${h.on?"✓":""}</span><b>${esc(h.n)}</b><button class="d f0" onclick="S.habits.splice(${i},1);save();render()">Hapus</button></div>`).join("")}
+<div class="row" style="margin-top:8px"><input id="nh" placeholder="Kebiasaan baru"><button class="f0" onclick="addH()">Tambah</button></div></div>
+<h2>Pengingat</h2><div class="card">${Object.entries(s.rem).map(([k,v])=>`<div class="row" style="margin-bottom:6px"><b style="flex:2">${k}</b><input type="time" value="${v[0]}" onchange="S.settings.rem['${k}'][0]=this.value;save()"><button class="f0 ${v[1]?"p":""}" onclick="S.settings.rem['${k}'][1]=${v[1]?0:1};save();render()">${v[1]?"Aktif":"Mati"}</button></div>`).join("")}
+<p class="mut">Izin notifikasi: <b>${"Notification" in window?Notification.permission:"tidak didukung"}</b></p>
+<div class="row"><button onclick="askNotif()">Izinkan notifikasi</button><button onclick="notify('NAIK','Uji notifikasi berhasil.')">Uji notifikasi</button></div>
+<p class="mut">Penting: pengingat hanya berbunyi saat halaman ini terbuka atau aktif di latar belakang. Android bisa menutupnya kapan saja, jadi alarm tidak dijamin. Untuk pengingat andal, pasang alarm bawaan HP atau gunakan versi APK (Capacitor).</p></div>
+<h2>Data</h2><div class="card"><p class="mut">Cadangan terakhir: ${S.backup?new Date(S.backup).toLocaleString("id-ID"):"belum pernah"}. Data bisa hilang jika data browser dihapus.</p>
+<div class="row"><button class="p" onclick="expJ()">Ekspor JSON</button><button onclick="expC()">Ekspor CSV</button></div>
+<label class="l">Impor cadangan JSON</label><input type="file" accept=".json" onchange="impJ(this.files[0])">
+<button class="d" style="width:100%;margin-top:10px" onclick="if(confirm('Hapus SEMUA data?')){localStorage.removeItem(KEY);load();render()}">Hapus semua data</button></div>`}
+function addH(){const n=nh.value.trim();if(!n)return;S.habits.push({id:"h"+Date.now(),n:n.slice(0,60),on:1});save();render()}
+function dl(name,txt,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click()}
+function expJ(){S.backup=Date.now();save();dl("naik-"+today()+".json",JSON.stringify(S),"application/json");render()}
+function expC(){const r=[["tanggal","skor","salat","konten","duolingo","bangun"]];Object.keys(S.days).sort().forEach(k=>{const d=S.days[k],c=score(k);r.push([k,c.all,c.pr,c.done,d.duo?1:0,d.wake?hm(d.wake):""])});
+ dl("naik-"+today()+".csv",r.map(x=>x.join(",")).join("\n"),"text/csv")}
+function impJ(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);
+ if(!o||typeof o.days!=="object"||!o.settings||!Array.isArray(o.habits))throw 0;
+ if(!confirm("Gabungkan cadangan ini? Data tanggal yang sama akan ditimpa."))return;
+ Object.assign(S.days,o.days);const seen=new Set(S.sleeps.map(x=>x.t));(o.sleeps||[]).forEach(x=>{if(!seen.has(x.t))S.sleeps.push(x)});
+ S.settings=Object.assign(S.settings,o.settings);S.habits=o.habits;S.onboarded=true;save();render();toast("Impor berhasil")}catch(e){toast("File cadangan rusak atau tidak valid")}};r.readAsText(f)}
+// notifikasi
+function askNotif(){if(!("Notification" in window)){toast("Tidak didukung di sini");return}Notification.requestPermission().then(()=>render())}
+function notify(t,b){try{if("Notification" in window&&Notification.permission==="granted"){new Notification(t,{body:b});return}}catch(e){}toast(b)}
+const MSG={bangun:"Waktunya mulai. Kerjakan satu hal dulu.",konten:"Target konten hari ini belum selesai. Mulai dari satu konten.",duo:"Duolingo hari ini belum dicentang.",malam:"Waktunya evaluasi malam. Cukup jawaban singkat.",tidur:"Persiapkan diri untuk tidur agar besok lebih teratur."};
+let fired={};
+setInterval(()=>{if(!S||!S.onboarded)return;const n=new Date(),t=pad(n.getHours())+":"+pad(n.getMinutes()),d=day(),sc=score(today());
+ Object.entries(S.settings.rem).forEach(([k,v])=>{const id=today()+k;if(!v[1]||v[0]!==t||fired[id])return;
+  if((k==="bangun"&&d.wake)||(k==="konten"&&sc.done>=S.settings.target)||(k==="duo"&&d.duo))return;fired[id]=1;notify("NAIK",MSG[k])})},20000);
+load();render();
+</script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service worker tidak terdaftar:", err)));
+}
+</script></body></html>
